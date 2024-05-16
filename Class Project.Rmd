@@ -1,0 +1,257 @@
+---
+title: "Class Project"
+author: "Morgan Neal"
+date: "2024-05-08"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, fig.height = 15, fig.width = 20)
+```
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(ggtree)
+library(TDbook) 
+library(ggimage)
+library(rphylopic)
+library(treeio)
+library(tidytree)
+library(ape)
+library(TreeTools)
+library(phytools)
+library(ggnewscale)
+library(ggtreeExtra)
+library(ggstar)
+library(data.table)
+```
+
+```{r}
+NEON_MAGs <- read_csv("data/NEON/GOLD_Study_ID_Gs0161344_NEON.csv")
+
+head(NEON_MAGs)
+
+str(NEON_MAGs)
+
+NEON_MAGs_Ind <- NEON_MAGs %>% 
+  filter(`Genome Name` != "NEON combined assembly") 
+
+NEON_MAGs_Ind_tax <- NEON_MAGs_Ind %>% 
+  separate(`GTDB-Tk Taxonomy Lineage`, c("Domain", "Phylum", "Class", "Order", "Family", "Genus"), "; ", remove = FALSE)
+```
+
+```{r}
+kable(
+  NEON_MAGs_Ind_tax %>% 
+    count(Phylum, sort = TRUE)
+)
+```
+
+```{r}
+NEON_MAGs <- read_csv("data/NEON/GOLD_Study_ID_Gs0161344_NEON.csv") %>% 
+  # remove columns that are not needed for data analysis
+  select(-c(`GOLD Study ID`, `Bin Methods`, `Created By`, `Date Added`)) %>% 
+  # create a new column with the Assembly Type
+  mutate("Assembly Type" = case_when(`Genome Name` == "NEON combined assembly" ~ `Genome Name`,
+                            TRUE ~ "Individual")) %>% 
+  mutate_at("Assembly Type", str_replace, "NEON combined assembly", "Combined") %>% 
+  separate(`GTDB-Tk Taxonomy Lineage`, c("Domain", "Phylum", "Class", "Order", "Family", "Genus"), "; ", remove = FALSE) %>% 
+  # Get rid of the the common string "Soil microbial communities from "
+  mutate_at("Genome Name", str_replace, "Terrestrial soil microbial communities from ", "") %>% 
+  # Use the first `-` to split the column in two
+  separate(`Genome Name`, c("Site","Sample Name"), " - ") %>% 
+  # Get rid of the the common string "S-comp-1"
+  mutate_at("Sample Name", str_replace, "-comp-1", "") %>%
+  # separate the Sample Name into Site ID and plot info
+  separate(`Sample Name`, c("Site ID","subplot.layer.date"), "_", remove = FALSE,) %>% 
+  # separate the plot info into 3 columns
+  separate(`subplot.layer.date`, c("Subplot", "Layer", "Date"), "-")
+```
+
+```{r}
+NEON_MAGs_bact_ind <- NEON_MAGs %>%
+  filter(Domain == "Bacteria") %>%
+  filter(`Assembly Type` == "Individual")
+```
+
+```{r}
+NEON_MAGs_bact_ind %>%
+  ggplot(aes(x = Phylum)) +
+  geom_bar() +
+  coord_flip()
+```
+
+```{r}
+NEON_MAGs_bact_ind %>%
+  ggplot(aes(x = fct_rev(fct_infreq(Phylum)), fill = Site)) +
+  geom_bar() +
+  coord_flip()
+```
+
+```{r}
+NEON_MAGs_bact_ind %>%   
+ggplot(aes(x = fct_infreq(Phylum), y = `Total Number of Bases`)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+```
+
+```{r}
+NEON_MAGs_bact_ind %>%
+  ggplot(aes(x = Site, fill = Phylum)) +
+  geom_bar() +
+  coord_flip()
+```
+
+```{r}
+NEON_MAGs_bact_ind %>%
+  ggplot(aes(x = `Total Number of Bases`, y = `Gene Count`, color = Phylum)) +
+  geom_point() +
+  coord_flip()
+```
+
+```{r}
+NEON_MAGs_GSF <- NEON_MAGs %>%
+  filter(str_detect(`Site`, "Guanica State Forest and Biosphere Reserve, Puerto Rico"))
+```
+
+```{r}
+NEON_MAGs_D <- NEON_MAGs %>%
+  filter(str_detect(`GTDB-Tk Taxonomy Lineage`, "Dormibacterota"))
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Bin Lineage`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Bin Lineage Counts")
+```
+
+```{r}
+NEON_metagenomes <- read_tsv("data/NEON/exported_img_data_Gs0161344_NEON.tsv") %>% 
+  rename(`Genome Name` = `Genome Name / Sample Name`) %>% 
+  filter(str_detect(`Genome Name`, 're-annotation', negate = T)) %>% 
+  filter(str_detect(`Genome Name`, 'WREF plot', negate = T))
+```
+
+```{r}
+NEON_metagenomes <- NEON_metagenomes %>% 
+  # Get rid of the the common string "Soil microbial communities from "
+  mutate_at("Genome Name", str_replace, "Terrestrial soil microbial communities from ", "") %>% 
+  # Use the first `-` to split the column in two
+  separate(`Genome Name`, c("Site","Sample Name"), " - ") %>% 
+  # Get rid of the the common string "-comp-1"
+  mutate_at("Sample Name", str_replace, "-comp-1", "") %>%
+  # separate the Sample Name into Site ID and plot info
+  separate(`Sample Name`, c("Site ID","subplot.layer.date"), "_", remove = FALSE,) %>% 
+  # separate the plot info into 3 columns
+  separate(`subplot.layer.date`, c("Subplot", "Layer", "Date"), "-") 
+```
+
+```{r}
+NEON_chemistry <- read_tsv("data/NEON/neon_plot_soilChem1_metadata.tsv") %>% 
+  # remove -COMP from genomicsSampleID
+  mutate_at("genomicsSampleID", str_replace, "-COMP", "") 
+```
+
+```{r}
+NEON_FULL <- NEON_MAGs %>% 
+  left_join(NEON_metagenomes, by = c("Sample Name")) %>%
+  left_join(NEON_chemistry, by = c("Sample Name" = "genomicsSampleID"))
+```
+
+```{r}
+NEON_FULL_D <- NEON_FULL %>%
+  filter(str_detect(`Phylum`,"Dormibacterota" ))
+```
+
+```{r}
+NEON_FULL_D %>%   
+ggplot(aes(x = `Site.x`, y = `soilInWaterpH`)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=50, vjust=1, hjust=1))
+
+```
+
+
+
+```{r}
+NEON_FULL_D %>%
+  ggplot(aes(x = `Bin Contamination`)) +
+  geom_bar() +
+  labs(title = "Bin Contamination Counts")
+```
+
+```{r}
+tree_arc <- read.tree("data/NEON/gtdbtk.ar53.decorated.tree")
+tree_bac <- read.tree("data/NEON/gtdbtk.bac120.decorated.tree")
+```
+
+```{r}
+node_vector_bac = c(tree_bac$tip.label,tree_bac$node.label)
+grep("Dormibacterota", node_vector_bac, value = TRUE)
+```
+
+```{r}
+match(grep("Dormibacterota", node_vector_bac, value = TRUE), node_vector_bac)
+```
+```{r}
+NEON_MAGs_metagenomes_chemistry <- NEON_MAGs %>% 
+  left_join(NEON_metagenomes, by = "Sample Name") %>% 
+  left_join(NEON_chemistry, by = c("Sample Name" = "genomicsSampleID")) %>% 
+  rename("label" = "Bin ID")
+```
+
+```{r}
+tree_bac_preorder <- Preorder(tree_bac)
+tree_Dormibacterota <- Subtree(tree_bac_preorder, 1767)
+
+NEON_MAGs_Dormibacterota <- NEON_MAGs_metagenomes_chemistry %>% 
+  filter(Phylum == "Dormibacterota") 
+```
+
+```{r}
+ggtree(tree_bac, layout="circular", branch.length="none") +
+  
+    geom_hilight(node=1767, fill="steelblue", alpha=.6) +
+    geom_cladelab(node=1767, label="Dormibacterota", align=TRUE, offset = 0, textcolor='steelblue', barcolor='steelblue') +
+
+    geom_hilight(node=1789, fill="darkgreen", alpha=.6) +
+    geom_cladelab(node=1789, label="Actinomycetota", align=TRUE, vjust=-0.4, offset = 0, textcolor='darkgreen', barcolor='darkgreen') +
+  
+      geom_hilight(node=2673, fill="darkorange", alpha=.6) +
+    geom_cladelab(node=2673, label="Acidobacteriota", align=TRUE, hjust=1.1, offset = 0, textcolor='darkorange', barcolor='darkorange')
+```
+
+```{r}
+NEON_MAGs_metagenomes_chemistry_noblank <- NEON_MAGs_metagenomes_chemistry %>% 
+  rename("AssemblyType" = "Assembly Type") %>% 
+  rename("BinCompleteness" = "Bin Completeness") %>% 
+  rename("BinContamination" = "Bin Contamination") %>% 
+  rename("TotalNumberofBases" = "Total Number of Bases") %>% 
+  rename("EcosystemSubtype" = "Ecosystem Subtype")
+
+ggtree(tree_Dormibacterota)  %<+%
+  NEON_MAGs_metagenomes_chemistry + 
+  geom_tippoint(aes(colour=`Ecosystem Subtype`)) + 
+
+# For unknown reasons the following does not like blank spaces in the names
+  geom_facet(panel = "Bin Completeness", data = NEON_MAGs_metagenomes_chemistry_noblank, geom = geom_point, 
+      mapping=aes(x = BinCompleteness)) +
+  geom_facet(panel = "Bin Contamination", data = NEON_MAGs_metagenomes_chemistry_noblank, geom = geom_col, 
+                aes(x = BinContamination), orientation = 'y', width = .6) +
+  theme_tree2(legend.position=c(.1, .7))
+```
+
+```{r}
+ggtree(tree_Dormibacterota, layout="circular")  %<+%
+  NEON_MAGs_metagenomes_chemistry + 
+  geom_point2(mapping=aes(color=`Ecosystem Subtype`, size=`Total Number of Bases`))
+```
+
+
+
+
+
+
+
