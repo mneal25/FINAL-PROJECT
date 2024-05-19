@@ -2,8 +2,36 @@
 title: "Class Project"
 author: "Morgan Neal"
 date: "2024-05-08"
-output: html_document
+output: 
+  html_document: 
+  toc: TRUE
+  toc_depth: 3
+  theme: flatly
+bibliography: export-data (1).bib
 ---
+## Abstract
+  This study investigates the distribution of Dormibacterota, a phylum of bacteria, across NEON sites. It also investigates the taxonomic breakdown at a specific site, Guanica State Forest. Dormibacterota are currently poorly understood due to their low abundance compared to other bacterial phyla. This project displays taxonomic breakdowns, using R as a data analysis tool, that provides insight into the abundance of Dormibacterota across different sites and the diversity within the tropical forest ecosystem that is Guanica State Forest. The analysis displayed variations in Dormibacterota composition among different sites, suggesting that this phylum prefers certain environmental conditions. Within Guanica State Forest, distinct taxonomic profiles were observed with relatively low diversity at that site alone. Lastly, this project provides valuable insights into the ecological roles of Dormibacterota in various ecosystems and to the colonization that is possible in tropical forest ecosystems.
+
+## Motivating Reasons 
+  The motivating factors for this experiment was to analyze the diversity of taxonomic groups at Guanica State Forest. Knowing the diversity of taxonomic groups can allow researchers to understand what species can grow in certain areas around the world depending on the geography of the area. Additionally, analyzing the sites in which Dormibacterota was found allows researchers to understand where this certain type of species prefers to live in or thrives in. Learning data analysis, using outside data, provides a great skill to early researchers that will only make better scientists in the long run. Data analysis also allows researchers to recognize patterns which can hint at relationships between environments and organisms living there. Doing research like this, also provides researchers with a way of knowing where species rich environments are so that they can be protected and used for further research.
+## Introduction 
+  Guánica State Forest is a subtropical dry forest in southwest Puerto Rico. It is the best preserved dry forest in the Caribbean. It has a warm climate with two rainy/ hurricane seasons. It is home to over 700 species of plants that are divided into three groups: deciduous forest, semi-evergreen forest, and scrub forest. Its most famous plant is a guaiac wood tree that could be as old as 1,000 years. This site is home to multiple different ecosystems including beaches, coral reefs, salt flats, mangrove forests, and limestone caverns (@sotomayor-mena_soil_2020). Half of Puerto Rico's birds occur in the Guánica State Forest and it is one of the few habitats where the Cook's pallid anole (lizard species) can be found. This forest has both marine and terrestrial wildlife, including coral reefs, birds, grasshoppers, ants, etc.
+  Dormibacterota is uncultured bacteria that is normally found in cold deserts and are a phylum of oligotrophic bacteria that live under the soil. They are known for their survival mechanisms that allow them to survive under starvation conditions. They are thought to be aerobic heterotrophs and based on genome analysis, they have been found to synthesize, store, and break down glycogen (@montgomery_persistence_2021). This phylum of bacteria is not very well researched since they are most commonly found in extremely cold environments. There is a lot of ongoing research that is looking into Dormibacterota phylogenetic relationships and their contribution to the environment in which they live. 
+  
+## Methods 
+Data Acquisition and Preparation: 
+Data Collection: Taxonomic data can be obtained from various sources such as biodiversity databases, field surveys, or existing literature. I obtained my data from the National Ecological Observatory Network (NEON). 
+Data Cleaning and Formatting: Clean the NEON data to remove any inconsistencies, missing values, or errors. Ensure that the data is formatted correctly for analysis in R Studio by making the data sets a workable size and only containing the columns that I wanted to analyze. 
+Data Exploration and Visualization
+Exploratory Data Analysis: Explored the taxonomic data to understand its structure, distribution, and characteristics. I used histograms, bar graphs, and box plots to visualize these features. 
+Software and Packages
+R Studio: Performed all analyses using R. Pushed projects to GitHub for storage and collaboration. 
+R Packages: Utilize various R packages for taxonomic analysis such as tidyverse, ggtree, and data.table.
+
+## Results
+
+### Dormibacterota Across All NEON Sites
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE, fig.height = 15, fig.width = 20)
 ```
@@ -39,7 +67,7 @@ NEON_MAGs_Ind <- NEON_MAGs %>%
 NEON_MAGs_Ind_tax <- NEON_MAGs_Ind %>% 
   separate(`GTDB-Tk Taxonomy Lineage`, c("Domain", "Phylum", "Class", "Order", "Family", "Genus"), "; ", remove = FALSE)
 ```
-
+All Phyla Counts 
 ```{r}
 kable(
   NEON_MAGs_Ind_tax %>% 
@@ -74,39 +102,69 @@ NEON_MAGs_bact_ind <- NEON_MAGs %>%
   filter(`Assembly Type` == "Individual")
 ```
 
+Phyla with Dormibacterota Filtered
+```{r}
+kable(
+  NEON_MAGs_Ind_tax %>% 
+    count(Phylum,sort('Dormibacterota')))
+```
+
 ```{r}
 NEON_MAGs_bact_ind %>%
   ggplot(aes(x = Phylum)) +
   geom_bar() +
-  coord_flip()
+  coord_flip() +
+  labs(title = "Phyla Counts Across All Sites")
 ```
 
 ```{r}
 NEON_MAGs_bact_ind %>%
   ggplot(aes(x = fct_rev(fct_infreq(Phylum)), fill = Site)) +
   geom_bar() +
-  coord_flip()
+  coord_flip() +
+  labs(title = "Phyla Counts Labeled by Site")
 ```
+
+```{r}
+NEON_MAGs_bact_ind %>% 
+ggplot(aes(x = Phylum)) +
+  geom_bar(position = position_dodge2(width = 0.9, preserve = "single")) +
+  coord_flip() +
+  facet_wrap(vars(Site), scales = "free", ncol = 2) +
+  labs(title = "Phyla Counts Separated Out by Site")
+```
+
 
 ```{r}
 NEON_MAGs_bact_ind %>%   
 ggplot(aes(x = fct_infreq(Phylum), y = `Total Number of Bases`)) +
   geom_boxplot() +
-  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(title = "Total Number of Nucleotide Bases for each Major Phylum")
+```
+
+```{r}
+NEON_MAGs_bact_ind %>%
+  ggplot(aes(x = Subplot, color = `Site ID`, fill = `Site ID`)) +
+  geom_bar() +
+  coord_flip() +
+  labs (title = "Subplot Count Colored by Site ID")
 ```
 
 ```{r}
 NEON_MAGs_bact_ind %>%
   ggplot(aes(x = Site, fill = Phylum)) +
   geom_bar() +
-  coord_flip()
+  coord_flip() +
+  labs(title = "Phyla Counts at Various Sites, Colored by Phylum")
 ```
 
 ```{r}
 NEON_MAGs_bact_ind %>%
   ggplot(aes(x = `Total Number of Bases`, y = `Gene Count`, color = Phylum)) +
   geom_point() +
-  coord_flip()
+  coord_flip() +
+  labs(title = "Gene Count vs Total Number of Bases At All Sites, Colored by Phylum")
 ```
 
 ```{r}
@@ -117,14 +175,6 @@ NEON_MAGs_GSF <- NEON_MAGs %>%
 ```{r}
 NEON_MAGs_D <- NEON_MAGs %>%
   filter(str_detect(`GTDB-Tk Taxonomy Lineage`, "Dormibacterota"))
-```
-
-```{r}
-NEON_MAGs_GSF %>%
-  ggplot(aes(x=`Bin Lineage`))+ 
-  geom_bar()+
-  coord_flip() +
-  labs(title = "Bin Lineage Counts")
 ```
 
 ```{r}
@@ -169,18 +219,48 @@ NEON_FULL_D <- NEON_FULL %>%
 NEON_FULL_D %>%   
 ggplot(aes(x = `Site.x`, y = `soilInWaterpH`)) +
   geom_boxplot() +
-  theme(axis.text.x = element_text(angle=50, vjust=1, hjust=1))
+  theme(axis.text.x = element_text(angle=50, vjust=1, hjust=1)) +
+  labs(title = "Soil Water pH Across Sites, Specific to Dormibacterota")
 
 ```
-
 
 
 ```{r}
 NEON_FULL_D %>%
   ggplot(aes(x = `Bin Contamination`)) +
   geom_bar() +
-  labs(title = "Bin Contamination Counts")
+  labs(title = "Dormibacterota Bin Contamination Counts")
 ```
+
+```{r}
+ggplot(data = NEON_FULL_D, aes(x = `Ecosystem Subtype`, y = `soilTemp`)) +
+  geom_point(aes(color = Order)) +
+  labs(title = "Ecosystem Subtype vs Temperture Colored by Order")
+```
+
+```{r}
+NEON_MAGs_metagenomes_chemistry <- NEON_MAGs %>% 
+  left_join(NEON_metagenomes, by = "Sample Name") %>% 
+  left_join(NEON_chemistry, by = c("Sample Name" = "genomicsSampleID")) %>% 
+  rename("label" = "Bin ID")
+```
+
+```{r}
+tree_bac <- read.tree("data/NEON/gtdbtk.bac120.decorated.tree")
+tree_bac_preorder <- Preorder(tree_bac)
+tree_Dormibacterota <- Subtree(tree_bac_preorder, 1767)
+```
+
+```{r}
+ggtree(tree_Dormibacterota)  %<+%
+  NEON_MAGs_metagenomes_chemistry + 
+  geom_tiplab(size=2, hjust=-.1) +
+  xlim(0,20) +
+  geom_point(mapping=aes(color=`Ecosystem Subtype`)) +
+  labs(title = "Dormibacterota Ecosystem Subtype Displayed Using Phylogenetic Tree")
+```
+
+
 
 ```{r}
 tree_arc <- read.tree("data/NEON/gtdbtk.ar53.decorated.tree")
@@ -210,6 +290,7 @@ NEON_MAGs_Dormibacterota <- NEON_MAGs_metagenomes_chemistry %>%
   filter(Phylum == "Dormibacterota") 
 ```
 
+
 ```{r}
 ggtree(tree_bac, layout="circular", branch.length="none") +
   
@@ -220,7 +301,8 @@ ggtree(tree_bac, layout="circular", branch.length="none") +
     geom_cladelab(node=1789, label="Actinomycetota", align=TRUE, vjust=-0.4, offset = 0, textcolor='darkgreen', barcolor='darkgreen') +
   
       geom_hilight(node=2673, fill="darkorange", alpha=.6) +
-    geom_cladelab(node=2673, label="Acidobacteriota", align=TRUE, hjust=1.1, offset = 0, textcolor='darkorange', barcolor='darkorange')
+    geom_cladelab(node=2673, label="Acidobacteriota", align=TRUE, hjust=1.1, offset = 0, textcolor='darkorange', barcolor='darkorange') +
+  labs(title = "Circular Phylogenetic Tree Showing Dormibacterota in Relation to Actinomycetota and Acidobacteriota")
 ```
 
 ```{r}
@@ -240,17 +322,109 @@ ggtree(tree_Dormibacterota)  %<+%
       mapping=aes(x = BinCompleteness)) +
   geom_facet(panel = "Bin Contamination", data = NEON_MAGs_metagenomes_chemistry_noblank, geom = geom_col, 
                 aes(x = BinContamination), orientation = 'y', width = .6) +
-  theme_tree2(legend.position=c(.1, .7))
+  theme_tree2(legend.position=c(.1, .7)) +
+  labs(title = "Phylogenetic Tree Displaying Ecosystem Subtypes, Bin Completeness Counts, and Bin Contamination Counts")
 ```
 
 ```{r}
 ggtree(tree_Dormibacterota, layout="circular")  %<+%
   NEON_MAGs_metagenomes_chemistry + 
-  geom_point2(mapping=aes(color=`Ecosystem Subtype`, size=`Total Number of Bases`))
+  geom_point2(mapping=aes(color=`Ecosystem Subtype`, size=`Total Number of Bases`)) +
+  labs(title = "Circular Dormibacterota Phylogenetic Tree Displaying Total Number of Bases and Ecosystem Subtype")
+```
+
+```{r}
+NEON_MAGs_Dormibacterota %>%
+  ggplot(aes(x=`Ecosystem Subtype`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Ecosystem Subtypes where Dormibacterota are Found")
 ```
 
 
+### Bacterial Genomes at Guanica State Forest 
 
+```{r}
+kable(
+  NEON_metagenomes_GUAN <- NEON_metagenomes %>%
+    select(c(`Sample Name`, `Site ID`, `Ecosystem Subtype`))
+)
+```
+
+```{r}
+ggplot(data = NEON_metagenomes_GUAN, aes(x = `Site ID`, y = `Ecosystem Subtype`)) +
+  geom_point() +
+  labs(title = "Ecosystem Subtype at each Site ID, Guanica State Forest = GUAN")
+```
+
+```{r}
+ggplot(NEON_MAGs_GSF)+geom_bar(mapping=aes(y=`GTDB-Tk Taxonomy Lineage`))+
+  labs(title = "Count of each Taxonomy Lineage at Guanica State Forest")
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Bin Lineage`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Bin Lineage Counts at Guanica State Forest")
+```
+
+```{r}
+kable(
+  NEON_MAGs %>%
+    filter(str_detect(`Site`, "Guanica State Forest and Biosphere Reserve, Puerto Rico"))
+)
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Class`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Class Counts at Guanica State Forest")
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Order`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Order Counts at Guanica State Forest")
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Family`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Family Counts at Guanica State Forest")
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Genus`))+ 
+  geom_bar()+
+  coord_flip() +
+  labs(title = "Genus Counts at Guanica State Forest")
+```
+
+```{r}
+NEON_MAGs_GSF %>%
+  ggplot(aes(x=`Bin Completeness`, y = `Bin Contamination`))+ 
+  geom_point() +
+  labs(title = "Bin Completeness Values vs Bin Contamination Values at Guanica State Forest")
+```
+
+## Discussion 
+  As mentioned above, the focal site was Guanica State Forest and Biosphere Reserve and the focal phylum was Dormibacterota. The most abundant order at Guanica State Forest was UBA4738, the most abundant genus was DSRY01, the most abundant domain was Bacteria, and the most abundant family was HRBIN12. The top bin lineage count was Bacteria, Actinomycetota and the the top taxonomy lineage was Bacteria, Actinobacteria, Acidimicrobiia, IMCC26256, PALSA-555. The most abundant bacteria at this site was Actinobacteria. Guanica State Forest was characterized as a tropical forest for ecosystem subtype with other subtypes being wetlands, tundra, temperate forest, shrubland, grasslands, desert, and boreal forest. 
+  The ecosystems where Dormibacterota were found included shrublands, grasslands, temperate forest, and boreal forest (in order from highest to lowest count). As can be seen in the circular phylogenetic tree, Dormibacterota is a very small phylum. This is further supported by the small number of bases in the data. It seems to prefer warmer temperatures based off of the soil temperature vs ecosystem subtype graph. Dormibacterota were the most abundant in Niwot Ridge, Colorado. With their counts in Yellostone and Denali National Park following closely behind.
+  These results are significant because they provide insight into where Dormibacteriota prefer to live and what organisms are most abundant in Guanica State Forest, Puerto Rico. The research on Dormibacterota is very limited, from what I can find, so these results are good start into the evolving research. This data analysis had some limitations because R was difficult to use at times. The learning process may have altered some of the results since data may not be represented in the best way possible. 
+
+## Conclusion 
+  This research project looked at taxonomic groups at Guanica State Forest and at Dormibacterota, in particular, across multiple NEON sites. Interesting data was analyzed and presented but further research is definitely needed to understand the diversity of Guanica State Forest and the characteristics of Dormibacterota. I think that a deeper dive into Guanica State Forest would be beneficial to the field of genomics because it would allow researchers to better categorize the species that are there and add details to the broader scope research in this project. Going to the sites where Dormibacterota were found would allow researchers to understand why this phylum prefers to live in those locations and what they may be contributing to the environment there. Overall, this project provides a good summary of Dormibacterota across sites and of the taxnomic breakdown at Guanica State Forest but deeper analysis would provide a great deal of insight into all phyla and NEON sites, leading to a more comprehensive overview.  
+
+## References 
 
 
 
